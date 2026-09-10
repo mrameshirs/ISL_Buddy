@@ -37,18 +37,30 @@ with st.sidebar:
     st.caption("AI Sign-to-Speech Engine | INSPIRE-MANAK")
     st.markdown("---")
     st.subheader("📋 Supported Gestures")
-    st.markdown("""
-    **Core Essential Words:**
-    * 💧 **Water** — Tap fingers near chin / W-sign
-    * 🆘 **Help** — Thumbs up resting on open palm
-    * 👨‍🏫 **Teacher** — T-hand pinch moving outward
-    * ⚡ **Pain** — Extended index fingers pointing inward
     
-    **Fingerspelling:** A, B, C, D, L, O, V, W, Y
+    st.markdown("""
+    ** Core Essential Words:**
+    
+    * 💧 **WATER** — Index + Middle + Ring fingers UP (3 fingers)
+    * 🆘 **HELP** — All 5 fingers UP (open palm)
+    * 👨🏫 **TEACHER** — Index + Middle fingers UP and TOGETHER
+    *  **PAIN** — Only Index finger UP (pointing)
+    * ‍⚕️ **DOCTOR** — Thumb + Index touching (O-shape)
+    
+    **🔤 Fingerspelling Letters:**
+    
+    * ️ **A / YES** — Only Thumb UP
+    * 🅻 **L** — Thumb + Index UP (L-shape)
+    * 🆅 **V / Victory** — Index + Middle UP and SPREAD
+    * 🆈 **Y / Call** — Thumb + Pinky UP (shaka sign)
+    
+    ---
+    **📝 Note:** These are simplified static poses for prototype testing. Full ISL uses dynamic two-handed movements.
     """)
+
     st.markdown("---")
     voice_lang = st.selectbox("🔊 Speech Accent:", ["en-IN", "hi-IN", "ta-IN", "te-IN"])
-    st.info("💡 **Tip:** Hold the gesture steady for **1.2 seconds** to confirm prediction.")
+    st.info(" **Tip:** Hold the gesture steady for **1.2 seconds** to confirm prediction.")
 
 # -----------------------------------------------------------------------------
 # MAIN APP HEADER
@@ -65,7 +77,6 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 # EMBEDDED MEDIAPIPE AI ENGINE & REAL-TIME DASHBOARD
 # -----------------------------------------------------------------------------
-# Inject the selected language safely into the JS
 js_voice_lang = voice_lang.split(' ')[0] if ' ' in voice_lang else voice_lang
 
 html_component = f"""
@@ -73,7 +84,6 @@ html_component = f"""
 <html>
 <head>
 <meta charset="utf-8">
-<!-- FIXED: Added drawing_utils which was missing in original code -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -107,7 +117,6 @@ html_component = f"""
 <body>
 
 <div class="grid-container">
-    <!-- LEFT PANEL: Real-Time Video Feed & Landmarks -->
     <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <span style="font-weight:800; font-size:1.05rem;">📷 Live Hand Pose Tracking</span>
@@ -123,9 +132,7 @@ html_component = f"""
         </div>
     </div>
 
-    <!-- RIGHT PANEL: Live Prediction & Real-Time Telemetry -->
     <div>
-        <!-- Primary Detected Sign Card -->
         <div class="card" id="predictionCard" style="margin-bottom: 16px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
@@ -148,7 +155,6 @@ html_component = f"""
             </div>
         </div>
 
-        <!-- Real-Time Assembled Sentence -->
         <div class="card" style="margin-bottom: 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div class="metric-title">🗣️ Sentence Builder (Click word to remove)</div>
@@ -160,7 +166,6 @@ html_component = f"""
             <button class="btn-action" style="width:100%; margin-top:10px; background:#EC4899;" onclick="speakFullSentence()">🔊 Speak Full Sentence</button>
         </div>
 
-        <!-- Real-Time History Diary -->
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div class="metric-title">📜 Real-Time History Log</div>
@@ -194,13 +199,13 @@ let currentSign = "None";
 let gestureStartTime = null;
 let lastSpokenSign = null;
 let historyEntries = [];
-const TARGET_LANG = "{js_voice_lang}"; // Injected from Streamlit
+const TARGET_LANG = "{js_voice_lang}";
 
 const synth = window.speechSynthesis;
 function speakWord(text) {{
     if (synth.speaking) synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = TARGET_LANG; // FIXED: Now respects sidebar selection
+    utterance.lang = TARGET_LANG;
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
     synth.speak(utterance);
@@ -248,7 +253,6 @@ function addToHistory(sign, conf, type) {{
     `).join('');
 }}
 
-// Geometric Feature Extraction from 21 Landmarks
 function classifyISLGesture(landmarks) {{
     const wrist = landmarks[0];
     const thumbTip = landmarks[4];
@@ -270,8 +274,6 @@ function classifyISLGesture(landmarks) {{
     const distThumbIndex = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
     const distIndexMiddle = Math.hypot(indexTip.x - middleTip.x, indexTip.y - middleTip.y);
 
-    // NOTE FOR HACKATHON: Replace this heuristic block with a TensorFlow.js model 
-    // for 10x better accuracy across different hand sizes and camera angles.
     if (indexExtended && middleExtended && ringExtended && pinkyExtended && thumbExtended) {{
         return {{ label: "HELP", type: "Core Word", conf: 96 }};
     }}
@@ -306,7 +308,6 @@ function onResults(results) {{
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {{
-        // Process first detected hand (Expand to multiHandLandmarks[1] for two-handed ISL)
         const landmarks = results.multiHandLandmarks[0];
         drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {{color: '#38BDF8', lineWidth: 3}});
         drawLandmarks(canvasCtx, landmarks, {{color: '#EC4899', lineWidth: 2, radius: 4}});
@@ -322,7 +323,6 @@ function onResults(results) {{
                 holdTimerElem.innerText = elapsed.toFixed(1) + "s";
 
                 if (elapsed >= 1.2 && lastSpokenSign !== pred.label) {{
-                    // Visual feedback on lock
                     predictionCard.classList.add('flash-success');
                     setTimeout(() => predictionCard.classList.remove('flash-success'), 500);
 
@@ -398,21 +398,9 @@ with col_m2:
 with col_m3:
     st.markdown("""
     <div class="embossed-box">
-        <h4 style="margin:0 0 6px 0; color:#EC4899;">📜 Editable Sentence Assembler</h4>
+        <h4 style="margin:0 0 6px 0; color:#EC4899;"> Editable Sentence Assembler</h4>
         <p style="font-size:0.85rem; color:#94A3B8; margin:0;">
             Chains sequential signs into meaningful phrases. <b>Click any word</b> in the sentence box to remove it if the AI misclassifies, giving the user ultimate control.
         </p>
     </div>
     """, unsafe_allow_html=True)
-
-st.markdown("""
-<div class="embossed-box" style="margin-top: 16px; border-left: 4px solid #10B981;">
-    <h4 style="margin:0 0 6px 0; color:#10B981;">🚀 Next-Level Hackathon Upgrades (To Implement Next)</h4>
-    <ul style="font-size:0.9rem; color:#CBD5E1; margin:0; padding-left: 20px;">
-        <li><b>TensorFlow.js Integration:</b> Replace the heuristic <code>if/else</code> rules with a lightweight KNN or Neural Network model trained on actual ISL landmark datasets for 95%+ accuracy.</li>
-        <li><b>Two-Handed Gestures:</b> Update <code>classifyISLGesture</code> to accept <code>landmarks1</code> and <code>landmarks2</code> to recognize complex two-handed ISL words like "Help" or "Water".</li>
-        <li><b>Offline PWA Mode:</b> Package this as a Progressive Web App so it works in rural areas with zero internet connectivity.</li>
-        <li><b>"Teach the AI" Button:</b> Add a feature where users can type the correct word when confidence is low, saving the 21 landmark coordinates to a CSV to crowdsourcing a massive open-source ISL dataset.</li>
-    </ul>
-</div>
-""", unsafe_allow_html=True)
